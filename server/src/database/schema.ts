@@ -2,7 +2,9 @@ import { relations } from "drizzle-orm";
 import { sqliteTable, text, real, integer } from "drizzle-orm/sqlite-core";
 
 export const orders = sqliteTable("orders", {
-  id: text("id").primaryKey(),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   email: text("email").notNull(),
   amount: real("amount").notNull(),
@@ -14,7 +16,7 @@ export const orders = sqliteTable("orders", {
 });
 
 export const files = sqliteTable("files", {
-  id: text("id").primaryKey(),
+  fileId: text("id").primaryKey(),
   order: text("order").notNull(),
   orientation: text("orientation").notNull(),
   color: text("color").notNull(),

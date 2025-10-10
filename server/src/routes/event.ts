@@ -4,7 +4,7 @@ import { orderChannel } from "../channels/orderChannel.js";
 
 const app = new Hono();
 
-app.get("/sse", (c) =>
+app.get("/", (c) =>
   createResponse(c.req.raw, (session) => {
     orderChannel.register(session);
   }),

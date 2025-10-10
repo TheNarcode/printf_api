@@ -18,11 +18,12 @@ app.post("/upload", authMiddleware, async (c) => {
 
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
-  const filename = `${crypto.randomUUID()}`;
+  const fileId = `${crypto.randomUUID()}`;
+  const { pages } = await extractMetadataAndPages(arrayBuffer);
 
   const command = new PutObjectCommand({
     Bucket: process.env.BUCKET,
-    Key: filename,
+    Key: fileId,
     Body: uint8Array,
     ContentType: file.type,
     ContentLength: uint8Array.length,
@@ -34,11 +35,13 @@ app.post("/upload", authMiddleware, async (c) => {
     return c.json({ message: "failed" }, 500);
 
   await db.insert(metadata).values({
-    file: filename,
-    pages: (await extractMetadataAndPages(arrayBuffer)).pages,
+    fileId,
+    type: file.type,
+    name: file.name,
+    pages,
   });
 
-  return c.json({ file: filename });
+  return c.json({ file: fileId });
 });
 
 export default app;
