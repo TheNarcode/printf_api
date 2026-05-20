@@ -7,26 +7,26 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.888.0",
-    "@aws-sdk/s3-request-presigner": "^3.888.0",
-    "@hono/node-server": "^1.19.2",
-    "@hono/zod-validator": "^0.7.2",
-    "@libsql/client": "^0.15.15",
-    "better-sse": "^0.15.1",
-    "dotenv": "^16.6.1",
-    "drizzle-orm": "^0.44.5",
-    "google-auth-library": "^10.3.0",
-    "hono": "^4.9.7",
+    "@aws-sdk/client-s3": "^3.1050.0",
+    "@aws-sdk/s3-request-presigner": "^3.1050.0",
+    "@hono/node-server": "^2.0.3",
+    "@hono/zod-validator": "^0.8.0",
+    "@libsql/client": "^0.17.3",
+    "better-sse": "^0.16.1",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "google-auth-library": "^10.6.2",
+    "hono": "^4.12.21",
     "pdf-metadata": "^2.0.1",
-    "pdf-parse": "^1.1.1",
+    "pdf-parse": "^2.4.5",
     "razorpay": "^2.9.6",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^20.19.14",
+    "@types/node": "^25.9.1",
     "@types/pdf-parse": "^1.1.5",
-    "drizzle-kit": "^0.31.4",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
   }
 }
