@@ -46,7 +46,7 @@ export const filesRelations = relations(files, ({ one }) => ({
     references: [orders.id],
   }),
   metadata: one(metadata, {
-    fields: [files.id],
+    fields: [files.fileId],
     references: [metadata.fileId],
   }),
 }));
