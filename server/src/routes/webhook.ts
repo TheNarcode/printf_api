@@ -8,7 +8,8 @@ import { orders } from "../database/schema.js";
 
 const app = new Hono();
 
-app.get(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
+app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
+  console.log("got webhook");
   const body: WEBHOOK_DATA = await c.req.json();
 
   if (body.type !== WEBHOOK_TYPE.SUCCESS)
@@ -25,7 +26,7 @@ app.get(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
 
   if (!order) return c.text("error: invalid order");
 
-  orderChannel.broadcast(order.files);
+  orderChannel.broadcast(order.files[0]);
 
   return c.text("ok: done with payment");
 });
