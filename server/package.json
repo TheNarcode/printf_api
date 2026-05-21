@@ -17,6 +17,7 @@
     "pdf-lib": "^1.17.1",
     "razorpay": "^2.9.6",
     "short-unique-id": "^5.3.2",
+    "upigateway": "^1.0.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {

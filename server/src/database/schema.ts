@@ -5,9 +5,9 @@ export const orders = sqliteTable("orders", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  name: text("name").notNull(),
   email: text("email").notNull(),
   amount: real("amount").notNull(),
+  paymentRequestId: text("payment_request_id").notNull(),
   paid: integer("paid", { mode: "boolean" }).notNull().default(false),
   status: integer("status").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
