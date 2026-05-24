@@ -12,6 +12,8 @@ const app = new Hono();
 const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 10 });
 
 app.post("/create", async (c) => {
+  console.log("file");
+
   const { file } = await c.req.parseBody();
 
   if (!(file instanceof File)) return c.text("not a file", 200);
@@ -40,6 +42,8 @@ app.post("/create", async (c) => {
     name: file.name,
     pages: pdf.getPageCount(),
   });
+
+  // pdf.flush();
 
   return c.json({ fileId });
 });

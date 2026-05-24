@@ -4,7 +4,7 @@ import { z } from "zod";
 import database from "../database/index";
 import { metadata, orders, files } from "../database/schema";
 import { eq } from "drizzle-orm";
-// import { razorpay } from "../services/razorpay";
+import { razorpay } from "../services/razorpay";
 import { OAuth2Client } from "google-auth-library";
 import { orderChannel } from "../channels/orderChannel";
 import { authMiddleware } from "../middlewares/auth";
@@ -19,6 +19,7 @@ app.post(
   // authMiddleware,
   zValidator("json", z.array(PrintConfig)),
   async (c) => {
+    console.log("order");
     const file = c.req.valid("json")[0];
 
     const metadataResponse = await database.query.metadata.findFirst({
@@ -31,17 +32,20 @@ app.post(
 
     const amount = metadataResponse.pages * 2;
 
-    const payment = await upiGateway.createRequest({
-      amount: amount.toFixed(2),
+    const rp = await razorpay.orders.create({
+      amount: amount * 100,
+      currency: "INR",
+      method: "upi",
+      receipt: "print #1",
     });
 
-    const order = await database.transaction(async (tx) => {
+    await database.transaction(async (tx) => {
       const [order] = await tx
         .insert(orders)
         .values({
           amount,
           email: "adityadav1809@gmail.com",
-          paymentRequestId: payment.id,
+          paymentRequestId: rp.id,
         })
         .returning({ id: orders.id, amount: orders.amount });
 
@@ -53,7 +57,7 @@ app.post(
       return order;
     });
 
-    return c.json({ order, payment });
+    return c.json(rp);
   },
 );
 
