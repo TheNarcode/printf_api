@@ -1,10 +1,7 @@
-import { createResponse } from "better-sse";
 import { Hono } from "hono";
 import { orderChannel } from "../channels/orderChannel.js";
-import { WEBHOOK_DATA, WEBHOOK_TYPE } from "../types/index.js";
 import database from "../database";
 import { eq } from "drizzle-orm";
-// import { type } from "razorpay";
 import { orders } from "../database/schema.js";
 
 const app = new Hono();
@@ -15,13 +12,12 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
 
   if (payload.event != "order.paid") return c.text("ok: done with payment");
 
-  let id = payload.payload.order.entity.id;
-  console.dir(payload, { depth: 100 });
+  const id = payload.payload.order.entity.id;
 
   // if (body.type !== WEBHOOK_TYPE.SUCCESS)
   //   return c.text("error: payment failed");
 
-  // // todo: update database
+  // // todo: update database & check key
 
   const order = await database.query.orders.findFirst({
     where: eq(orders.paymentRequestId, id),
@@ -29,8 +25,6 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
       files: true,
     },
   });
-
-  console.log(order);
 
   if (!order) return c.text("error: invalid order");
 

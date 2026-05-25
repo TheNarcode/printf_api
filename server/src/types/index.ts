@@ -15,17 +15,3 @@ export const PrintConfig = z.object({
 });
 
 export type PrintConfigType = z.infer<typeof PrintConfig>;
-
-export enum WEBHOOK_TYPE {
-  SUCCESS = "SUCCESS", // 1
-  EXPIRED = "EXPIRED", // 2
-  CANCELLED = "CANCELLED", // 3
-}
-
-export type WEBHOOK_DATA = {
-  type: WEBHOOK_TYPE;
-  webhookId: string;
-  requestId: string;
-  status: number;
-  timestamp: number;
-};

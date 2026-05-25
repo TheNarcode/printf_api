@@ -6,10 +6,8 @@ import { metadata, orders, files } from "../database/schema";
 import { eq } from "drizzle-orm";
 import { razorpay } from "../services/razorpay";
 import { OAuth2Client } from "google-auth-library";
-import { orderChannel } from "../channels/orderChannel";
 import { authMiddleware } from "../middlewares/auth";
 import { PrintConfig } from "../types/index";
-import { upiGateway } from "../services/upigateway";
 
 const app = new Hono();
 const client = new OAuth2Client();
@@ -19,7 +17,6 @@ app.post(
   // authMiddleware,
   zValidator("json", z.array(PrintConfig)),
   async (c) => {
-    console.log("order");
     const file = c.req.valid("json")[0];
 
     const metadataResponse = await database.query.metadata.findFirst({
