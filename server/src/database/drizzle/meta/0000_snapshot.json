@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c7e23e83-068d-4b16-92d4-c837d2ba0100",
+  "id": "96645ee7-79de-4d70-9564-2e4d4faa5df5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "files": {
@@ -139,13 +139,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "email": {
           "name": "email",
           "type": "text",
@@ -160,6 +153,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "payment_request_id": {
+          "name": "payment_request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "paid": {
           "name": "paid",
           "type": "integer",
@@ -170,11 +170,11 @@
         },
         "status": {
           "name": "status",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'processing'"
+          "default": 0
         },
         "created_at": {
           "name": "created_at",

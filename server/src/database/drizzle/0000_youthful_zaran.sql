@@ -21,10 +21,10 @@ CREATE TABLE `metadata` (
 --> statement-breakpoint
 CREATE TABLE `orders` (
 	`id` text PRIMARY KEY NOT NULL,
-	`name` text NOT NULL,
 	`email` text NOT NULL,
 	`amount` real NOT NULL,
+	`payment_request_id` text NOT NULL,
 	`paid` integer DEFAULT false NOT NULL,
-	`status` text DEFAULT 'processing' NOT NULL,
+	`status` integer DEFAULT 0 NOT NULL,
 	`created_at` integer NOT NULL
 );

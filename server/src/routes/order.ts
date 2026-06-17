@@ -4,14 +4,10 @@ import { z } from "zod";
 import database from "../database/index";
 import { metadata, orders, files } from "../database/schema";
 import { eq } from "drizzle-orm";
-// import { razorpay } from "../services/razorpay";
+import { razorpay } from "../services/razorpay";
 import { OAuth2Client } from "google-auth-library";
-import { orderChannel } from "../channels/orderChannel";
 import { authMiddleware } from "../middlewares/auth";
 import { PrintConfig } from "../types/index";
-import { Session } from "better-sse";
-import { upgradeWebSocket } from "hono/cloudflare-workers";
-import { WSContext } from "hono/ws";
 
 const app = new Hono();
 const client = new OAuth2Client();
@@ -22,7 +18,6 @@ app.post(
   zValidator("json", z.array(PrintConfig)),
   async (c) => {
     const file = c.req.valid("json")[0];
-    // const user = c.get("w");
 
     const metadataResponse = await database.query.metadata.findFirst({
       where: eq(metadata.fileId, file.fileId),
@@ -32,37 +27,34 @@ app.post(
     if (!metadataResponse)
       return c.json({ message: "something went wrong" }, 400);
 
-    // // if (!metadataResponse || !user.email)
-    // //   return c.json({ message: "something went wrong" });
-    //
+    const amount = metadataResponse.pages * 2;
 
-    const orderId = await database.transaction(async (tx) => {
+    const rp = await razorpay.orders.create({
+      amount: amount * 100,
+      currency: "INR",
+      method: "upi",
+      receipt: "print #1",
+    });
+
+    await database.transaction(async (tx) => {
       const [order] = await tx
         .insert(orders)
         .values({
-          name: file.name,
-          amount: metadataResponse.pages * 2,
+          amount,
           email: "adityadav1809@gmail.com",
+          paymentRequestId: rp.id,
         })
-        .returning({ id: orders.id });
+        .returning({ id: orders.id, amount: orders.amount });
 
       await tx.insert(files).values({
         order: order.id,
         ...file,
       });
 
-      return order.id;
+      return order;
     });
 
-    orderChannel.broadcast(file);
-
-    // const response = await razorpay.orders.create({
-    //   amount: "100",
-    //   currency: "INR",
-    //   receipt: "payment for print #1",
-    // });
-
-    return c.json({ orderId });
+    return c.json(rp);
   },
 );
 
