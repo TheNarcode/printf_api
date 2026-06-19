@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import database from "../database/index";
 import { metadata } from "../database/schema";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { authMiddleware } from "../middlewares/auth";
 import { maxFileSizeLimit, validMimes } from "../constants";
 import shortUniqueId from "short-unique-id";
@@ -23,12 +23,26 @@ app.post("/create", async (c) => {
   const fileId = `222118_${sui.rnd()}`;
 
   const arrayBuffer = await file.arrayBuffer();
-  const fileArray = new Uint8Array(arrayBuffer);
-  
+
   let pages = 0;
+  let fileArray: Uint8Array;
   try {
     const pdf = await PDFDocument.load(arrayBuffer);
     pages = pdf.getPageCount();
+
+    const helveticaFont = await pdf.embedFont(StandardFonts.Helvetica);
+    const pdfPages = pdf.getPages();
+    for (const page of pdfPages) {
+      page.drawText(fileId, {
+        x: 20,
+        y: 20,
+        size: 10,
+        font: helveticaFont,
+        color: rgb(0, 0, 0),
+      });
+    }
+
+    fileArray = await pdf.save();
   } catch (error) {
     console.error("Invalid PDF uploaded:", error);
     return c.json({ message: "Invalid PDF file. Please ensure you are uploading a valid PDF document." }, 400);

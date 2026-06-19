@@ -31,7 +31,10 @@ app.post(
       });
 
       if (!metadataResponse) {
-        return c.json({ message: `Metadata missing for file ${file.fileId}` }, 400);
+        return c.json(
+          { message: `Metadata missing for file ${file.fileId}` },
+          400,
+        );
       }
 
       totalAmount += metadataResponse.pages * 2;
@@ -60,7 +63,7 @@ app.post(
           paymentRequestId: rp.id,
         })
         .returning({ id: orders.id, amount: orders.amount });
-      
+
       dbOrderId = order.id;
 
       for (const file of filesData) {
@@ -77,26 +80,22 @@ app.post(
   },
 );
 
-app.get(
-  "/list",
-  authMiddleware,
-  async (c) => {
-    const payload = c.get("payload");
+app.get("/list", authMiddleware, async (c) => {
+  const payload = c.get("payload");
 
-    const result = await database.query.orders.findMany({
-      where: eq(orders.email, payload.email!),
-      orderBy: [desc(orders.createdAt)],
-      with: {
-        files: {
-          with: {
-            metadata: true,
-          },
+  const result = await database.query.orders.findMany({
+    where: eq(orders.email, payload.email!),
+    orderBy: [desc(orders.createdAt)],
+    with: {
+      files: {
+        with: {
+          metadata: true,
         },
       },
-    });
+    },
+  });
 
-    return c.json(result);
-  },
-);
+  return c.json(result);
+});
 
 export default app;
