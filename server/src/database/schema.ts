@@ -27,6 +27,7 @@ export const files = sqliteTable("files", {
   sides: text("sides").notNull(),
   printScaling: text("print_scaling").notNull(),
   documentFormat: text("document_format").notNull(),
+  printed: integer("printed", { mode: "boolean" }),
 });
 
 export const metadata = sqliteTable("metadata", {

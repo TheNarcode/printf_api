@@ -9,7 +9,7 @@ import { s3Client } from "../services/s3.js";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 
 const app = new Hono();
-const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 10 });
+const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 7 });
 
 app.post("/create", async (c) => {
   const { file } = await c.req.parseBody();
@@ -20,7 +20,7 @@ app.post("/create", async (c) => {
   // if (!validMimes.includes(file.type)) return c.json({ message: "unsupported file" }, 400);
   // if (file.size > maxFileSizeLimit) return c.json({ message: "file size too large" }, 400);
 
-  const fileId = `222118_${sui.rnd()}`;
+  const fileId = sui.rnd();
 
   const arrayBuffer = await file.arrayBuffer();
 
@@ -32,15 +32,14 @@ app.post("/create", async (c) => {
 
     const helveticaFont = await pdf.embedFont(StandardFonts.Helvetica);
     const pdfPages = pdf.getPages();
-    for (const page of pdfPages) {
-      page.drawText(fileId, {
-        x: 20,
-        y: 20,
-        size: 10,
-        font: helveticaFont,
-        color: rgb(0, 0, 0),
-      });
-    }
+
+    pdfPages[0].drawText(fileId, {
+      x: 20,
+      y: 20,
+      size: 10,
+      font: helveticaFont,
+      color: rgb(0, 0, 0),
+    });
 
     fileArray = await pdf.save();
   } catch (error) {

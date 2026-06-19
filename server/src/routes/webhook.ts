@@ -20,10 +20,25 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
 
     if (fileRecord) {
       await database
-        .update(orders)
-        .set({ status: 2 })
-        .where(eq(orders.id, fileRecord.order));
-      console.log(`Updated order status to 2 for order ID: ${fileRecord.order}`);
+        .update(files)
+        .set({ printed: true })
+        .where(eq(files.fileId, fileId));
+
+      const allOrderFiles = await database.query.files.findMany({
+        where: eq(files.order, fileRecord.order),
+      });
+
+      const allPrinted = allOrderFiles.every((f) => f.printed === true);
+
+      if (allPrinted) {
+        await database
+          .update(orders)
+          .set({ status: 2 })
+          .where(eq(orders.id, fileRecord.order));
+        console.log(`Updated order status to 2 for order ID: ${fileRecord.order}`);
+      } else {
+        console.log(`Order ID: ${fileRecord.order} still has unprinted files.`);
+      }
     } else {
       console.warn(`File ID ${fileId} not found in database`);
     }

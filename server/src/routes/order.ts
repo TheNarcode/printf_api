@@ -8,6 +8,35 @@ import { razorpay } from "../services/razorpay";
 import { authMiddleware } from "../middlewares/auth";
 import { PrintConfig } from "../types/index";
 
+function getUniquePrintPageCount(range: string, totalPages: number): number {
+  const trimmed = range.trim().toLowerCase();
+  if (!trimmed || trimmed === "all") {
+    return totalPages;
+  }
+
+  const pages = new Set<number>();
+
+  range.split(",").forEach((part) => {
+    part = part.trim();
+
+    if (part.includes("-")) {
+      const [start, end] = part.split("-").map(Number);
+      if (!isNaN(start) && !isNaN(end)) {
+        for (let i = start; i <= end; i++) {
+          pages.add(i);
+        }
+      }
+    } else {
+      const pageNum = Number(part);
+      if (!isNaN(pageNum)) {
+        pages.add(pageNum);
+      }
+    }
+  });
+
+  return pages.size;
+}
+
 const app = new Hono();
 
 app.post(
@@ -37,13 +66,16 @@ app.post(
         );
       }
 
-      totalAmount += metadataResponse.pages * 2;
+      const pageCount = getUniquePrintPageCount(file.pageRanges, metadataResponse.pages);
+      totalAmount += pageCount * 2;
     }
+
+    totalAmount = totalAmount * 105;
 
     let rp;
     try {
       rp = await razorpay.orders.create({
-        amount: totalAmount * 100,
+        amount: Math.round(totalAmount),
         currency: "INR",
         receipt: `print_${Date.now()}`,
       });
