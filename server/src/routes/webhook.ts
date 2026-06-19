@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { orderChannel } from "../channels/orderChannel.js";
 import database from "../database";
 import { eq } from "drizzle-orm";
-import { orders, files } from "../database/schema.js";
+import { orders, files, fcmTokens } from "../database/schema.js";
+import { admin } from "../services/fcm.js";
 
 const app = new Hono();
 
@@ -36,6 +37,57 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
           .set({ status: 2 })
           .where(eq(orders.id, fileRecord.order));
         console.log(`Updated order status to 2 for order ID: ${fileRecord.order}`);
+
+        // ── Send FCM push notification to the user ──────────────────
+        try {
+          const order = await database.query.orders.findFirst({
+            where: eq(orders.id, fileRecord.order),
+          });
+
+          if (order) {
+            const userTokens = await database.query.fcmTokens.findMany({
+              where: eq(fcmTokens.email, order.email),
+            });
+
+            for (const t of userTokens) {
+              try {
+                await admin.messaging().send({
+                  token: t.token,
+                  notification: {
+                    title: "Print Complete! 🖨️",
+                    body: "Your print order is ready for pickup.",
+                  },
+                  data: {
+                    orderId: fileRecord.order,
+                    type: "print_completed",
+                  },
+                  android: {
+                    priority: "high",
+                    notification: {
+                      channelId: "print_updates",
+                      sound: "default",
+                    },
+                  },
+                });
+                console.log(`FCM sent to ${t.email} (token: ${t.token.slice(0, 10)}...)`);
+              } catch (fcmErr: any) {
+                // If the token is invalid/expired, clean it up
+                if (
+                  fcmErr?.code === "messaging/invalid-registration-token" ||
+                  fcmErr?.code === "messaging/registration-token-not-registered"
+                ) {
+                  console.warn(`Removing stale FCM token for ${t.email}`);
+                  await database.delete(fcmTokens).where(eq(fcmTokens.id, t.id));
+                } else {
+                  console.error(`FCM send error for ${t.email}:`, fcmErr);
+                }
+              }
+            }
+          }
+        } catch (notifErr) {
+          // Don't fail the webhook if notification fails
+          console.error("Failed to send push notification:", notifErr);
+        }
       } else {
         console.log(`Order ID: ${fileRecord.order} still has unprinted files.`);
       }
@@ -49,11 +101,6 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
   if (payload.event !== "order.paid") return c.text("ok: unhandled event");
 
   const id = payload.payload.order.entity.id;
-
-  // if (body.type !== WEBHOOK_TYPE.SUCCESS)
-  //   return c.text("error: payment failed");
-
-  // // todo: update database & check key
 
   const order = await database.query.orders.findFirst({
     where: eq(orders.paymentRequestId, id),
@@ -75,3 +122,4 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
 });
 
 export default app;
+

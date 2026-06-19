@@ -26,3 +26,5 @@ lerna-debug.log*
 
 # misc
 .DS_Store
+
+printf-fcm-firebase-adminsdk-fbsvc-5af6a0b042.json

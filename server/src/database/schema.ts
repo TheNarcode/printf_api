@@ -37,6 +37,17 @@ export const metadata = sqliteTable("metadata", {
   pages: integer("pages").notNull(),
 });
 
+export const fcmTokens = sqliteTable("fcm_tokens", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  email: text("email").notNull(),
+  token: text("token").notNull().unique(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export const ordersRelations = relations(orders, ({ many }) => ({
   files: many(files),
 }));

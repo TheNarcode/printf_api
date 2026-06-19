@@ -67,10 +67,14 @@ app.post(
       }
 
       const pageCount = getUniquePrintPageCount(file.pageRanges, metadataResponse.pages);
-      totalAmount += pageCount * 2;
+      const copies = parseInt(file.copies, 10) || 1;
+      const numberUp = parseInt(file.numberUp, 10) || 1;
+      const effectiveSheets = Math.ceil(pageCount / numberUp);
+      
+      totalAmount += effectiveSheets * copies * 2;
     }
 
-    totalAmount = totalAmount * 105;
+    totalAmount = totalAmount * 105; // 5% convenience fee and converts to paise (100 * 1.05)
 
     let rp;
     try {

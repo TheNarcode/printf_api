@@ -3,6 +3,7 @@ import orderRouter from "./routes/order";
 import uploadRouter from "./routes/file";
 import eventRouter from "./routes/event";
 import webhookRouter from "./routes/webhook";
+import notificationRouter from "./routes/notification";
 
 const app = new Hono();
 
@@ -10,6 +11,7 @@ app.route("/order", orderRouter);
 app.route("/file", uploadRouter);
 app.route("/event", eventRouter);
 app.route("/webhook", webhookRouter);
+app.route("/notification", notificationRouter);
 
 app.get("/", async (c) => {
   return c.text("server up");
