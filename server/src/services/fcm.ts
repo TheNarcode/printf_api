@@ -1,19 +1,16 @@
-import admin from "firebase-admin";
-import path from "path";
-import { readFileSync } from "fs";
+import {
+  initializeApp,
+  getApps,
+  cert,
+  ServiceAccount,
+} from "firebase-admin/app";
+import { getMessaging } from "firebase-admin/messaging";
+import serviceAccount from "../../printf-fcm-firebase-adminsdk-fbsvc-5af6a0b042.json" with { type: "json" };
 
-// Initialize Firebase Admin SDK with the service account key file.
-// The key file lives next to package.json in the server root.
-if (!admin.apps.length) {
-  const keyPath = path.resolve(
-    import.meta.dir,
-    "../../printf-fcm-firebase-adminsdk-fbsvc-5af6a0b042.json",
-  );
-  const serviceAccount = JSON.parse(readFileSync(keyPath, "utf-8"));
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+if (!getApps().length) {
+  initializeApp({
+    credential: cert(serviceAccount as ServiceAccount),
   });
 }
 
-export { admin };
+export { getMessaging };

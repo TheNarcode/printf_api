@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { orderChannel } from "../channels/orderChannel.js";
-import database from "../database";
+import database from "../database/index.js";
 import { eq } from "drizzle-orm";
 import { orders, files, fcmTokens } from "../database/schema.js";
-import { admin } from "../services/fcm.js";
+import { getMessaging } from "../services/fcm.js";
 
 const app = new Hono();
 
@@ -31,12 +31,16 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
 
       const allPrinted = allOrderFiles.every((f) => f.printed === true);
 
+      console.log(allPrinted);
+
       if (allPrinted) {
         await database
           .update(orders)
           .set({ status: 2 })
           .where(eq(orders.id, fileRecord.order));
-        console.log(`Updated order status to 2 for order ID: ${fileRecord.order}`);
+        console.log(
+          `Updated order status to 2 for order ID: ${fileRecord.order}`,
+        );
 
         // ── Send FCM push notification to the user ──────────────────
         try {
@@ -51,7 +55,7 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
 
             for (const t of userTokens) {
               try {
-                await admin.messaging().send({
+                await getMessaging().send({
                   token: t.token,
                   notification: {
                     title: "Print Complete! 🖨️",
@@ -69,7 +73,9 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
                     },
                   },
                 });
-                console.log(`FCM sent to ${t.email} (token: ${t.token.slice(0, 10)}...)`);
+                console.log(
+                  `FCM sent to ${t.email} (token: ${t.token.slice(0, 10)}...)`,
+                );
               } catch (fcmErr: any) {
                 // If the token is invalid/expired, clean it up
                 if (
@@ -77,7 +83,9 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
                   fcmErr?.code === "messaging/registration-token-not-registered"
                 ) {
                   console.warn(`Removing stale FCM token for ${t.email}`);
-                  await database.delete(fcmTokens).where(eq(fcmTokens.id, t.id));
+                  await database
+                    .delete(fcmTokens)
+                    .where(eq(fcmTokens.id, t.id));
                 } else {
                   console.error(`FCM send error for ${t.email}:`, fcmErr);
                 }
@@ -116,10 +124,9 @@ app.post(`/${process.env.WEBHOOK_SECRET || "webhook"}`, async (c) => {
     .set({ paid: true, status: 1 })
     .where(eq(orders.id, order.id));
 
-  orderChannel.broadcast(order.files[0]);
+  orderChannel.broadcast(order.files);
 
   return c.text("ok: done with payment");
 });
 
 export default app;
-

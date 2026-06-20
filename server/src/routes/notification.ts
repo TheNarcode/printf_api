@@ -2,17 +2,12 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
-import database from "../database/index";
-import { fcmTokens } from "../database/schema";
-import { authMiddleware } from "../middlewares/auth";
+import database from "../database/index.js";
+import { fcmTokens } from "../database/schema.js";
+import { authMiddleware } from "../middlewares/auth.js";
 
 const app = new Hono();
 
-// POST /notification/register
-// Called by the Android app on every launch / sign-in to upsert the FCM token.
-// If the token already exists for this user, it's a no-op.
-// If the token exists for a different user (e.g. after sign-out/sign-in),
-// we update the email.
 app.post(
   "/register",
   authMiddleware,

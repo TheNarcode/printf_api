@@ -1,16 +1,16 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import database from "../database/index";
-import { metadata, orders, files } from "../database/schema";
+import database from "../database/index.js";
+import { metadata, orders, files } from "../database/schema.js";
 import { eq, desc } from "drizzle-orm";
-import { razorpay } from "../services/razorpay";
-import { authMiddleware } from "../middlewares/auth";
-import { PrintConfig } from "../types/index";
+import { razorpay } from "../services/razorpay.js";
+import { authMiddleware } from "../middlewares/auth.js";
+import { PrintConfig } from "../types/index.js";
 
 function getUniquePrintPageCount(range: string, totalPages: number): number {
   const trimmed = range.trim().toLowerCase();
-  if (!trimmed || trimmed === "all") {
+  if (!trimmed) {
     return totalPages;
   }
 
@@ -22,13 +22,16 @@ function getUniquePrintPageCount(range: string, totalPages: number): number {
     if (part.includes("-")) {
       const [start, end] = part.split("-").map(Number);
       if (!isNaN(start) && !isNaN(end)) {
-        for (let i = start; i <= end; i++) {
+        // Ensure start is at least 1 and end doesn't exceed totalPages
+        const actualStart = Math.max(1, start);
+        const actualEnd = Math.min(totalPages, end);
+        for (let i = actualStart; i <= actualEnd; i++) {
           pages.add(i);
         }
       }
     } else {
       const pageNum = Number(part);
-      if (!isNaN(pageNum)) {
+      if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
         pages.add(pageNum);
       }
     }
@@ -56,7 +59,7 @@ app.post(
     for (const file of filesData) {
       const metadataResponse = await database.query.metadata.findFirst({
         where: eq(metadata.fileId, file.fileId),
-        columns: { pages: true },
+        columns: { pages: true, type: true },
       });
 
       if (!metadataResponse) {
@@ -66,15 +69,23 @@ app.post(
         );
       }
 
-      const pageCount = getUniquePrintPageCount(file.pageRanges, metadataResponse.pages);
+      // Treat images as having exactly 1 page, even if previously saved as 0
+      const isImage = metadataResponse.type.startsWith("image/");
+      const totalPages = isImage ? 1 : Math.max(1, metadataResponse.pages);
+
+      const pageCount = getUniquePrintPageCount(
+        file.pageRanges,
+        totalPages,
+      );
+
       const copies = parseInt(file.copies, 10) || 1;
       const numberUp = parseInt(file.numberUp, 10) || 1;
       const effectiveSheets = Math.ceil(pageCount / numberUp);
-      
+
       totalAmount += effectiveSheets * copies * 2;
     }
 
-    totalAmount = totalAmount * 105; // 5% convenience fee and converts to paise (100 * 1.05)
+    totalAmount = totalAmount * 105;
 
     let rp;
     try {

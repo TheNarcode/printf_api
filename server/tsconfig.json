@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "strict": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
   },

@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import database from "../database/index";
-import { metadata } from "../database/schema";
+import database from "../database/index.js";
+import { metadata } from "../database/schema.js";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { authMiddleware } from "../middlewares/auth";
-import { maxFileSizeLimit, validMimes } from "../constants";
+import { authMiddleware } from "../middlewares/auth.js";
+import { maxFileSizeLimit, validMimes } from "../constants.js";
 import shortUniqueId from "short-unique-id";
 import { s3Client } from "../services/s3.js";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
@@ -24,35 +24,42 @@ app.post("/create", async (c) => {
 
   const arrayBuffer = await file.arrayBuffer();
 
-  let pages = 0;
-  let fileArray: Uint8Array;
-  try {
-    const pdf = await PDFDocument.load(arrayBuffer);
-    pages = pdf.getPageCount();
+  let pages = 1;
+  let uploadBody: Uint8Array;
 
-    const helveticaFont = await pdf.embedFont(StandardFonts.Helvetica);
-    const pdfPages = pdf.getPages();
+  if (file.type.startsWith("image/")) {
+    // Images are uploaded directly without any modification
+    uploadBody = new Uint8Array(arrayBuffer);
+  } else {
+    // Treat as PDF: embed fileId footer and count pages
+    try {
+      const pdf = await PDFDocument.load(arrayBuffer);
+      pages = pdf.getPageCount();
 
-    pdfPages[0].drawText(fileId, {
-      x: 20,
-      y: 20,
-      size: 10,
-      font: helveticaFont,
-      color: rgb(0, 0, 0),
-    });
+      const helveticaFont = await pdf.embedFont(StandardFonts.Helvetica);
+      const pdfPages = pdf.getPages();
 
-    fileArray = await pdf.save();
-  } catch (error) {
-    console.error("Invalid PDF uploaded:", error);
-    return c.json({ message: "Invalid PDF file. Please ensure you are uploading a valid PDF document." }, 400);
+      pdfPages[0].drawText(fileId, {
+        x: 20,
+        y: 20,
+        size: 10,
+        font: helveticaFont,
+        color: rgb(0, 0, 0),
+      });
+
+      uploadBody = await pdf.save();
+    } catch (error) {
+      console.error("Invalid PDF uploaded:", error);
+      return c.json({ message: "Invalid PDF file. Please ensure you are uploading a valid PDF document." }, 400);
+    }
   }
 
   const command = new PutObjectCommand({
     Bucket: process.env.BUCKET,
     Key: fileId,
-    Body: fileArray,
+    Body: uploadBody,
     ContentType: file.type,
-    ContentLength: fileArray.length,
+    ContentLength: uploadBody.length,
   });
 
   await s3Client.send(command);

@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import orderRouter from "./routes/order";
-import uploadRouter from "./routes/file";
-import eventRouter from "./routes/event";
-import webhookRouter from "./routes/webhook";
-import notificationRouter from "./routes/notification";
+import orderRouter from "./routes/order.js";
+import uploadRouter from "./routes/file.js";
+import eventRouter from "./routes/event.js";
+import webhookRouter from "./routes/webhook.js";
+import notificationRouter from "./routes/notification.js";
 
 const app = new Hono();
 
