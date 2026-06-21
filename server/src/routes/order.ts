@@ -92,6 +92,7 @@ app.get("/list", authMiddleware, async (c) => {
   const result = await database.query.orders.findMany({
     where: eq(orders.email, payload.email!),
     orderBy: [desc(orders.createdAt)],
+    limit: 50,
     with: {
       files: {
         with: {
@@ -99,7 +100,6 @@ app.get("/list", authMiddleware, async (c) => {
         },
       },
     },
-    limit: 5,
   });
 
   return c.json(result);

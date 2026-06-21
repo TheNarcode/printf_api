@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { sqliteTable, text, real, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, real, integer, index } from "drizzle-orm/sqlite-core";
 
 export const orders = sqliteTable("orders", {
   id: text("id")
@@ -13,7 +13,9 @@ export const orders = sqliteTable("orders", {
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
-});
+}, (table) => ({
+  emailIdx: index("email_idx").on(table.email),
+}));
 
 export const files = sqliteTable("files", {
   fileId: text("id").primaryKey(),
@@ -28,7 +30,9 @@ export const files = sqliteTable("files", {
   printScaling: text("print_scaling").notNull(),
   documentFormat: text("document_format").notNull(),
   printed: integer("printed", { mode: "boolean" }),
-});
+}, (table) => ({
+  orderIdx: index("order_idx").on(table.order),
+}));
 
 export const metadata = sqliteTable("metadata", {
   fileId: text("file_id").primaryKey(),
