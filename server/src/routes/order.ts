@@ -1,20 +1,21 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import database from "../database/index.js";
-import { metadata, orders, files } from "../database/schema.js";
+import db from "../database/index";
+import { metadata, orders, files } from "../database/schema";
 import { eq, desc } from "drizzle-orm";
-import { razorpay } from "../services/razorpay.js";
-import { authMiddleware } from "../middlewares/auth.js";
-import { PrintConfig } from "../types/index.js";
+import { razorpay } from "../services/razorpay";
+import { authMiddleware } from "../middlewares/auth";
+import { PrintConfig } from "../types/index";
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
 app.post(
   "/create",
   authMiddleware,
   zValidator("json", z.array(PrintConfig)),
   async (c) => {
+    const database = db(c.env.PRINTFDB);
     const filesData = c.req.valid("json");
     const payload = c.get("payload");
 
@@ -38,7 +39,14 @@ app.post(
       const copies = parseInt(file.copies) || 1;
       const numberUp = parseInt(file.numberUp) || 1;
       const effectivePages = Math.ceil(pageCount / numberUp);
-      const price = file.sides === "one-sided" ? 3 : 2; // ?
+
+      const isColor = file.color && file.color.toLowerCase() === "color";
+      let price = 0;
+      if (isColor) {
+        price = file.sides === "one-sided" ? 5 : 10;
+      } else {
+        price = file.sides === "one-sided" ? 3 : 2;
+      }
 
       totalAmount += effectivePages * copies * price;
     }
@@ -51,32 +59,35 @@ app.post(
       receipt: `print_${Date.now()}`,
     });
 
-    let orderResponse = await database.transaction(async (tx) => {
-      const [order] = await tx
-        .insert(orders)
-        .values({
-          amount: totalAmount,
-          email: payload.email!,
-          paymentRequestId: rp.id,
-        })
-        .returning({ id: orders.id, amount: orders.amount });
+    const orderId = crypto.randomUUID();
 
-      for (const file of filesData) {
-        await tx.insert(files).values({
-          order: order.id,
+    const batchQueries: any[] = [
+      database.insert(orders).values({
+        id: orderId,
+        amount: totalAmount,
+        email: payload.email!,
+        paymentRequestId: rp.id,
+      })
+    ];
+
+    for (const file of filesData) {
+      batchQueries.push(
+        database.insert(files).values({
+          order: orderId,
           ...file,
-        });
-      }
+        })
+      );
+    }
 
-      return order;
-    });
+    await database.batch(batchQueries as any);
 
-    return c.json({ ...rp, localOrderId: orderResponse.id });
+    return c.json({ ...rp, localOrderId: orderId });
   },
 );
 
 app.get("/list", authMiddleware, async (c) => {
   const payload = c.get("payload");
+  const database = db(c.env.PRINTFDB);
 
   const result = await database.query.orders.findMany({
     where: eq(orders.email, payload.email!),

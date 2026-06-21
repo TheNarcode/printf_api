@@ -1,3 +1,11 @@
+CREATE TABLE `fcm_tokens` (
+	`id` text PRIMARY KEY NOT NULL,
+	`email` text NOT NULL,
+	`token` text NOT NULL,
+	`created_at` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `fcm_tokens_token_unique` ON `fcm_tokens` (`token`);--> statement-breakpoint
 CREATE TABLE `files` (
 	`id` text PRIMARY KEY NOT NULL,
 	`order` text NOT NULL,
@@ -9,7 +17,8 @@ CREATE TABLE `files` (
 	`number_up` text NOT NULL,
 	`sides` text NOT NULL,
 	`print_scaling` text NOT NULL,
-	`document_format` text NOT NULL
+	`document_format` text NOT NULL,
+	`printed` integer
 );
 --> statement-breakpoint
 CREATE TABLE `metadata` (

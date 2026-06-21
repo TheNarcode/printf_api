@@ -12,10 +12,7 @@ app.route("/webhook", webhookRouter);
 app.route("/notification", notificationRouter);
 
 app.get("/", async (c) => {
-  return c.text("server up");
+  return c.text("ok");
 });
 
-export default {
-  fetch: app.fetch,
-  idleTimeout: 0,
-};
+export default app;

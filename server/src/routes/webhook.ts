@@ -1,15 +1,24 @@
 import { Hono } from "hono";
-import database from "../database/index.js";
+import db from "../database/index";
 import { eq } from "drizzle-orm";
-import { orders, files, fcmTokens } from "../database/schema.js";
+import { orders, files, fcmTokens } from "../database/schema";
 import { getMessaging } from "firebase-admin/messaging";
 import { zValidator } from "@hono/zod-validator";
 import z from "zod";
-import { redis } from "../services/redis.js";
+import { redis } from "../services/redis";
+import {
+  initializeApp,
+  getApps,
+  cert,
+  ServiceAccount,
+} from "firebase-admin/app";
+import serviceAccount from "../../printf_fcm.json";
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
-app.post(`/adityalovesshinde`, async (c) => {
+app.post(`/payment`, async (c) => {
+  const database = db(c.env.PRINTFDB);
+
   let payload = await c.req.json();
 
   if (payload.event !== "order.paid") return c.json({ ok: true }, 200);
@@ -39,6 +48,14 @@ app.post(
   "/notify",
   zValidator("json", z.object({ id: z.string() })), // add auth
   async (c) => {
+    const database = db(c.env.PRINTFDB);
+
+    if (!getApps().length) {
+      initializeApp({
+        credential: cert(serviceAccount as ServiceAccount),
+      });
+    }
+
     let { id } = c.req.valid("json");
 
     const fileRecord = await database.query.files.findFirst({
@@ -80,8 +97,8 @@ app.post(
         await getMessaging().send({
           token: t.token,
           notification: {
-            title: `🖨️ order#${order.id} completed`,
-            body: "your print order is ready for pickup.",
+            title: `Order#${order.id.split("-")[0]} completed`,
+            body: "Your print order is ready for pickup.",
           },
           data: {
             orderId: fileRecord.order,
@@ -106,6 +123,8 @@ app.post(
         }
       }
     }
+
+    return c.json({ ok: true });
   },
 );
 

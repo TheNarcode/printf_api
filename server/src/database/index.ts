@@ -1,12 +1,6 @@
-import { drizzle } from "drizzle-orm/libsql";
-import * as schema from "./schema.js";
+import * as schema from "./schema";
+import { drizzle } from "drizzle-orm/d1";
 
-const db = drizzle({
-  connection: {
-    url: process.env.DATABASE_URL!,
-    authToken: process.env.DATABASE_AUTH_TOKEN!,
-  },
-  schema,
-});
-
-export default db;
+export default (DB: D1Database) => {
+  return drizzle(DB, { logger: false, schema });
+};

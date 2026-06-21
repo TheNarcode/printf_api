@@ -1,19 +1,17 @@
 import { Hono } from "hono";
-import database from "../database/index.js";
-import { metadata } from "../database/schema.js";
+import db from "../database/index";
+import { metadata } from "../database/schema";
 import { PDFDocument } from "pdf-lib";
-import { authMiddleware } from "../middlewares/auth.js";
-import { maxFileSizeLimit, validMimes } from "../constants.js";
+import { authMiddleware } from "../middlewares/auth";
+import { maxFileSizeLimit, validMimes } from "../constants";
 import shortUniqueId from "short-unique-id";
-import { s3Client } from "../services/s3.js";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 7 });
 
-app.post("/create", async (c) => {
-  // auth
+app.post("/create", authMiddleware, async (c) => {
   try {
+    const database = db(c.env.PRINTFDB);
     const { file } = await c.req.parseBody();
 
     if (
@@ -30,16 +28,25 @@ app.post("/create", async (c) => {
     switch (file.type) {
       case "image/png":
       case "image/jpeg":
-        await uploadToBucket(fileId, new Uint8Array(arrayBuffer), file, 1);
+        await c.env.PRINTFBUCKET.put(fileId, arrayBuffer);
+        await database.insert(metadata).values({
+          fileId,
+          type: file.type,
+          name: file.name,
+          pages: 1,
+        });
         return c.json({ fileId }, 200);
       case "application/pdf":
         const pdf = await PDFDocument.load(arrayBuffer);
-        await uploadToBucket(
+        await c.env.PRINTFBUCKET.put(fileId, arrayBuffer);
+
+        await database.insert(metadata).values({
           fileId,
-          new Uint8Array(arrayBuffer),
-          file,
-          pdf.getPageCount(),
-        );
+          type: file.type,
+          name: file.name,
+          pages: pdf.getPageCount(),
+        });
+
         return c.json({ fileId }, 200);
       default:
         return c.status(400);
@@ -48,29 +55,5 @@ app.post("/create", async (c) => {
     return c.status(500);
   }
 });
-
-async function uploadToBucket(
-  fileId: string,
-  uploadBody: Uint8Array<ArrayBufferLike>,
-  file: File,
-  pages: number,
-) {
-  const command = new PutObjectCommand({
-    Bucket: process.env.BUCKET,
-    Key: fileId,
-    Body: uploadBody,
-    ContentType: file.type,
-    ContentLength: uploadBody.length,
-  });
-
-  await s3Client.send(command);
-
-  await database.insert(metadata).values({
-    fileId,
-    type: file.type,
-    name: file.name,
-    pages,
-  });
-}
 
 export default app;
