@@ -1,20 +1,20 @@
 import { Hono } from "hono";
-import { orderChannel } from "../channels/orderChannel.js";
 import database from "../database/index.js";
 import { eq } from "drizzle-orm";
 import { orders, files, fcmTokens } from "../database/schema.js";
 import { getMessaging } from "firebase-admin/messaging";
 import { zValidator } from "@hono/zod-validator";
 import z from "zod";
+import { redis } from "../services/redis.js";
 
 const app = new Hono();
 
-app.post(`/payment`, async (c) => {
+app.post(`/adityalovesshinde`, async (c) => {
   let payload = await c.req.json();
 
-  if (payload.event !== "order.paid") return c.status(200);
+  if (payload.event !== "order.paid") return c.json({ ok: true }, 200);
 
-  const id = payload.payload.order.entity.id;
+  const id = payload.payload.order.entity.id as string;
 
   const order = await database.query.orders.findFirst({
     where: eq(orders.paymentRequestId, id),
@@ -23,16 +23,16 @@ app.post(`/payment`, async (c) => {
     },
   });
 
-  if (!order) return c.status(200);
+  if (!order) return c.json({ ok: true }, 200);
+  if (order.paid) return c.json({ ok: true }, 200);
 
   await database
     .update(orders)
     .set({ paid: true })
     .where(eq(orders.id, order.id));
 
-  orderChannel.broadcast(order.files);
-
-  return c.status(200);
+  await redis.lpush("printf_queue", JSON.stringify(order.files));
+  return c.json({ ok: true }, 200);
 });
 
 app.post(
@@ -45,7 +45,7 @@ app.post(
       where: eq(files.fileId, id),
     });
 
-    if (!fileRecord) return c.status(200);
+    if (!fileRecord) return c.json({ ok: true });
 
     await database
       .update(files)
@@ -58,7 +58,7 @@ app.post(
 
     const isAllPrinted = allFiles.every((f) => f.printed);
 
-    if (!isAllPrinted) return c.status(200);
+    if (!isAllPrinted) return c.json({ ok: true });
 
     await database
       .update(orders)
@@ -69,7 +69,7 @@ app.post(
       where: eq(orders.id, fileRecord.order),
     });
 
-    if (!order) return c.status(200);
+    if (!order) return c.json({ ok: true });
 
     const userTokens = await database.query.fcmTokens.findMany({
       where: eq(fcmTokens.email, order.email),

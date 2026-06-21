@@ -5,7 +5,7 @@ import type { TokenPayload } from "google-auth-library";
 const auth = createMiddleware<{ Variables: { payload: TokenPayload } }>(
   async (c, next) => {
     const authHeader = c.req.header("xxx-auth-token");
-    console.log(authHeader);
+    // console.log(authHeader);
     if (!authHeader) return c.json({ message: "auth header not present" }, 401);
 
     try {

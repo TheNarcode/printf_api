@@ -11,7 +11,8 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 const app = new Hono();
 const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 7 });
 
-app.post("/create", authMiddleware, async (c) => {
+app.post("/create", async (c) => {
+  // auth
   try {
     const { file } = await c.req.parseBody();
 
