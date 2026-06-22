@@ -12,7 +12,11 @@ app.route("/webhook", webhookRouter);
 app.route("/notification", notificationRouter);
 
 app.get("/", async (c) => {
-  return c.text("ok");
+  const res = await fetch(
+    "https://api.github.com/repos/TheNarcode/printf_api/commits",
+  );
+  const commits = (await res.json()) as { sha: string }[];
+  return c.text(commits[0].sha);
 });
 
 export default app;
