@@ -1,10 +1,13 @@
 import { relations } from "drizzle-orm";
 import { sqliteTable, text, real, integer, index } from "drizzle-orm/sqlite-core";
+import shortUniqueId from "short-unique-id";
+
+const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 7 });
 
 export const orders = sqliteTable("orders", {
   id: text("id")
     .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+    .$defaultFn(() => sui.rnd()),
   email: text("email").notNull(),
   amount: real("amount").notNull(),
   paymentRequestId: text("payment_request_id").notNull(),
@@ -13,9 +16,9 @@ export const orders = sqliteTable("orders", {
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
-}, (table) => ({
-  emailIdx: index("email_idx").on(table.email),
-}));
+}, (table) => [
+  index("email_idx").on(table.email),
+]);
 
 export const files = sqliteTable("files", {
   fileId: text("id").primaryKey(),
@@ -30,9 +33,9 @@ export const files = sqliteTable("files", {
   printScaling: text("print_scaling").notNull(),
   documentFormat: text("document_format").notNull(),
   printed: integer("printed", { mode: "boolean" }),
-}, (table) => ({
-  orderIdx: index("order_idx").on(table.order),
-}));
+}, (table) => [
+  index("order_idx").on(table.order),
+]);
 
 export const metadata = sqliteTable("metadata", {
   fileId: text("file_id").primaryKey(),
@@ -44,7 +47,7 @@ export const metadata = sqliteTable("metadata", {
 export const fcmTokens = sqliteTable("fcm_tokens", {
   id: text("id")
     .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+    .$defaultFn(() => sui.rnd()),
   email: text("email").notNull(),
   token: text("token").notNull().unique(),
   createdAt: integer("created_at", { mode: "timestamp_ms" })

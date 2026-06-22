@@ -1,25 +1,25 @@
 import { Hono } from "hono";
 import db from "../database/index";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { orders, files, fcmTokens } from "../database/schema";
 import { getMessaging } from "firebase-admin/messaging";
 import { zValidator } from "@hono/zod-validator";
 import z from "zod";
-import { redis } from "../services/redis";
-import {
-  initializeApp,
-  getApps,
-  cert,
-  ServiceAccount,
-} from "firebase-admin/app";
-import serviceAccount from "../../printf_fcm.json";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { Redis } from "@upstash/redis/cloudflare";
+import { razorpayWebhookMiddleware } from "../middlewares/razorpayWebhook";
+import { notifyWebhookMiddleware } from "../middlewares/notifyWebhook";
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.post(`/payment`, async (c) => {
+app.post(`/payment`, razorpayWebhookMiddleware, async (c) => {
   const database = db(c.env.PRINTFDB);
+  const redis = new Redis({
+    url: c.env.REDIS_URL,
+    token: c.env.REDIS_TOKEN,
+  });
 
-  let payload = await c.req.json();
+  const payload = JSON.parse(c.get("rawBody"));
 
   if (payload.event !== "order.paid") return c.json({ ok: true }, 200);
 
@@ -35,24 +35,28 @@ app.post(`/payment`, async (c) => {
   if (!order) return c.json({ ok: true }, 200);
   if (order.paid) return c.json({ ok: true }, 200);
 
-  await database
-    .update(orders)
-    .set({ paid: true })
-    .where(eq(orders.id, order.id));
+  await Promise.all([
+    database.update(orders).set({ paid: true }).where(eq(orders.id, order.id)),
+    redis.lpush("printf_queue", JSON.stringify(order.files)),
+  ]);
 
-  await redis.lpush("printf_queue", JSON.stringify(order.files));
   return c.json({ ok: true }, 200);
 });
 
 app.post(
   "/notify",
-  zValidator("json", z.object({ id: z.string() })), // add auth
+  notifyWebhookMiddleware,
+  zValidator("json", z.object({ id: z.string() })),
   async (c) => {
     const database = db(c.env.PRINTFDB);
 
     if (!getApps().length) {
       initializeApp({
-        credential: cert(serviceAccount as ServiceAccount),
+        credential: cert({
+          projectId: c.env.FIREBASE_PROJECT_ID,
+          clientEmail: c.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: c.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+        }),
       });
     }
 
@@ -73,18 +77,19 @@ app.post(
       where: eq(files.order, fileRecord.order),
     });
 
-    const isAllPrinted = allFiles.every((f) => f.printed);
+    const isAllPrinted = allFiles.every((f) => f.fileId === id || f.printed);
 
     if (!isAllPrinted) return c.json({ ok: true });
 
-    await database
-      .update(orders)
-      .set({ status: 2 })
-      .where(eq(orders.id, fileRecord.order));
-
-    const order = await database.query.orders.findFirst({
-      where: eq(orders.id, fileRecord.order),
-    });
+    const [order] = await Promise.all([
+      database.query.orders.findFirst({
+        where: eq(orders.id, fileRecord.order),
+      }),
+      database
+        .update(orders)
+        .set({ status: 2 })
+        .where(eq(orders.id, fileRecord.order)),
+    ]);
 
     if (!order) return c.json({ ok: true });
 
@@ -92,12 +97,14 @@ app.post(
       where: eq(fcmTokens.email, order.email),
     });
 
+    if (!userTokens.length) return c.json({ ok: true });
+
     for (const t of userTokens) {
       try {
         await getMessaging().send({
           token: t.token,
           notification: {
-            title: `Order#${order.id.split("-")[0]} completed`,
+            title: `Order#${order.id} completed`,
             body: "Your print order is ready for pickup.",
           },
           data: {

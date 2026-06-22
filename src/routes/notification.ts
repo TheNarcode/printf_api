@@ -19,22 +19,15 @@ app.post(
     const payload = c.get("payload");
     const email = payload.email!;
 
-    const existing = await database.query.fcmTokens.findFirst({
-      where: eq(fcmTokens.token, token),
-    });
+    await database
+      .insert(fcmTokens)
+      .values({ email, token })
+      .onConflictDoUpdate({
+        target: fcmTokens.token,
+        set: { email },
+      });
 
-    if (existing) {
-      if (existing.email !== email) {
-        await database
-          .update(fcmTokens)
-          .set({ email })
-          .where(eq(fcmTokens.token, token));
-      }
-      return c.json({ message: "token registered" });
-    }
-
-    await database.insert(fcmTokens).values({ email, token });
-    return c.status(200);
+    return c.body(null, 200);
   },
 );
 

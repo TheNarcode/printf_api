@@ -4,9 +4,12 @@ import { z } from "zod";
 import db from "../database/index";
 import { metadata, orders, files } from "../database/schema";
 import { eq, desc } from "drizzle-orm";
-import { razorpay } from "../services/razorpay";
 import { authMiddleware } from "../middlewares/auth";
 import { PrintConfig } from "../types/index";
+import Razorpay from "razorpay";
+import shortUniqueId from "short-unique-id";
+
+const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 7 });
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -19,39 +22,47 @@ app.post(
     const filesData = c.req.valid("json");
     const payload = c.get("payload");
 
-    if (!filesData || filesData.length === 0) return c.status(400);
+    if (!filesData || filesData.length === 0) return c.body(null, 400);
+
+    const metadataResponses = await Promise.all(
+      filesData.map((file) =>
+        database.query.metadata.findFirst({
+          where: eq(metadata.fileId, file.fileId),
+          columns: { pages: true, type: true },
+        }),
+      ),
+    );
+
+    if (metadataResponses.some((m) => !m)) return c.body(null, 400);
 
     let totalAmount = 0;
 
-    for (const file of filesData) {
-      const metadataResponse = await database.query.metadata.findFirst({
-        where: eq(metadata.fileId, file.fileId),
-        columns: { pages: true, type: true },
-      });
+    for (let i = 0; i < filesData.length; i++) {
+      const file = filesData[i];
+      const meta = metadataResponses[i]!;
 
-      if (!metadataResponse) return c.status(400);
-
-      const pageCount = getUniquePrintPageCount(
-        file.pageRanges,
-        metadataResponse.pages,
-      );
-
+      const pageCount = getUniquePrintPageCount(file.pageRanges, meta.pages);
       const copies = parseInt(file.copies) || 1;
       const numberUp = parseInt(file.numberUp) || 1;
       const effectivePages = Math.ceil(pageCount / numberUp);
-
-      const isColor = file.color && file.color.toLowerCase() === "color";
-      let price = 0;
-      if (isColor) {
-        price = file.sides === "one-sided" ? 5 : 10;
-      } else {
-        price = file.sides === "one-sided" ? 3 : 2;
-      }
+      const isColor = file.color?.toLowerCase() === "color";
+      const price = isColor
+        ? file.sides === "one-sided"
+          ? 5
+          : 10
+        : file.sides === "one-sided"
+          ? 3
+          : 2;
 
       totalAmount += effectivePages * copies * price;
     }
 
     totalAmount = totalAmount * 105;
+
+    const razorpay = new Razorpay({
+      key_id: c.env.RAZORPAY_KEY_ID,
+      key_secret: c.env.RAZORPAY_KEY_SECRET,
+    });
 
     const rp = await razorpay.orders.create({
       amount: Math.round(totalAmount),
@@ -59,26 +70,21 @@ app.post(
       receipt: `print_${Date.now()}`,
     });
 
-    const orderId = crypto.randomUUID();
+    const orderId = sui.rnd();
 
-    const batchQueries: any[] = [
+    const batchQueries = [
       database.insert(orders).values({
         id: orderId,
         amount: totalAmount,
         email: payload.email!,
         paymentRequestId: rp.id,
-      })
+      }),
+      database
+        .insert(files)
+        .values(filesData.map((file) => ({ order: orderId, ...file }))),
     ];
 
-    for (const file of filesData) {
-      batchQueries.push(
-        database.insert(files).values({
-          order: orderId,
-          ...file,
-        })
-      );
-    }
-
+    // order must be a transaction
     await database.batch(batchQueries as any);
 
     return c.json({ ...rp, localOrderId: orderId });
