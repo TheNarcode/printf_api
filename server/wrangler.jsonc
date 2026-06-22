@@ -1,0 +1,30 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "printfs",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-21",
+  "observability": {
+    "enabled": false,
+  },
+  "upload_source_maps": true,
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "PRINTFDB",
+      "database_name": "printfdb",
+      "database_id": "c3c42879-b8a9-49d2-9bdf-3dba01515fe3",
+      "migrations_dir": "src/database/drizzle",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PRINTFBUCKET",
+      "bucket_name": "printf",
+      "remote": true,
+    },
+  ],
+}

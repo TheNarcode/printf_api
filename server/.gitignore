@@ -28,3 +28,14 @@ lerna-debug.log*
 .DS_Store
 
 printf_fcm.json
+
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
