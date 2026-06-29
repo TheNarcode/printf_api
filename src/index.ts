@@ -45,10 +45,12 @@ function getUniquePrintPageCount(range: string, totalPages: number): number {
 }
 
 app.get("/stats", async (c) => {
+  const monthParam = c.req.query("month");
   const database = db(c.env.PRINTFDB);
   const allFiles = await database.query.files.findMany({
     with: {
       metadata: true,
+      order: true,
     },
   });
 
@@ -60,6 +62,35 @@ app.get("/stats", async (c) => {
   };
 
   for (const file of allFiles) {
+    if (monthParam && file.order?.createdAt) {
+      const date = new Date(file.order.createdAt);
+      if (!isNaN(date.getTime())) {
+        const monthNum = date.getMonth() + 1;
+        const yearNum = date.getFullYear();
+        const monthStrPadded = monthNum.toString().padStart(2, "0");
+        const yyyyMm = `${yearNum}-${monthStrPadded}`;
+        const monthNameLower = date.toLocaleString("en-US", { month: "long" }).toLowerCase();
+        const monthShortLower = date.toLocaleString("en-US", { month: "short" }).toLowerCase();
+
+        const paramClean = monthParam.trim().toLowerCase();
+        const paramAsNum = parseInt(paramClean, 10);
+
+        const matches =
+          yyyyMm === paramClean ||
+          monthNum.toString() === paramClean ||
+          monthStrPadded === paramClean ||
+          paramAsNum === monthNum ||
+          monthNameLower === paramClean ||
+          monthShortLower === paramClean ||
+          `${monthNameLower} ${yearNum}` === paramClean ||
+          `${monthShortLower} ${yearNum}` === paramClean;
+
+        if (!matches) {
+          continue;
+        }
+      }
+    }
+
     const isColor = file.color?.toLowerCase() === "color";
     const isSingleSided = file.sides === "one-sided";
 
