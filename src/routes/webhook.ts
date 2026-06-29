@@ -39,7 +39,7 @@ app.post(`/payment`, razorpayWebhookMiddleware, async (c) => {
   if (!order) return c.json({ ok: true }, 200);
 
   if (payload.event === "payment.cancelled") {
-    await database.update(orders).set({ status: 4 }).where(eq(orders.id, order.id));
+    await database.update(orders).set({ status: 2 }).where(eq(orders.id, order.id));
     return c.json({ ok: true }, 200);
   }
 
@@ -97,7 +97,7 @@ app.post(
       }),
       database
         .update(orders)
-        .set({ status: 2, printerName: printerName ?? null })
+        .set({ status: 1, printerName: printerName ?? null })
         .where(eq(orders.id, fileRecord.order)),
     ]);
 
