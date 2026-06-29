@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `printer_name` text;

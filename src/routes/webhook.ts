@@ -21,9 +21,13 @@ app.post(`/payment`, razorpayWebhookMiddleware, async (c) => {
 
   const payload = JSON.parse(c.get("rawBody"));
 
-  if (payload.event !== "order.paid") return c.json({ ok: true }, 200);
+  if (payload.event !== "order.paid" && payload.event !== "payment.cancelled") {
+    return c.json({ ok: true }, 200);
+  }
 
-  const id = payload.payload.order.entity.id as string;
+  const id = (payload.payload?.order?.entity?.id || payload.payload?.payment?.entity?.order_id) as string | undefined;
+
+  if (!id) return c.json({ ok: true }, 200);
 
   const order = await database.query.orders.findFirst({
     where: eq(orders.paymentRequestId, id),
@@ -33,6 +37,12 @@ app.post(`/payment`, razorpayWebhookMiddleware, async (c) => {
   });
 
   if (!order) return c.json({ ok: true }, 200);
+
+  if (payload.event === "payment.cancelled") {
+    await database.update(orders).set({ status: 4 }).where(eq(orders.id, order.id));
+    return c.json({ ok: true }, 200);
+  }
+
   if (order.paid) return c.json({ ok: true }, 200);
 
   await Promise.all([
@@ -46,7 +56,7 @@ app.post(`/payment`, razorpayWebhookMiddleware, async (c) => {
 app.post(
   "/notify",
   notifyWebhookMiddleware,
-  zValidator("json", z.object({ id: z.string() })),
+  zValidator("json", z.object({ id: z.string(), printerName: z.string().optional() })),
   async (c) => {
     const database = db(c.env.PRINTFDB);
 
@@ -60,7 +70,7 @@ app.post(
       });
     }
 
-    let { id } = c.req.valid("json");
+    let { id, printerName } = c.req.valid("json");
 
     const fileRecord = await database.query.files.findFirst({
       where: eq(files.fileId, id),
@@ -87,7 +97,7 @@ app.post(
       }),
       database
         .update(orders)
-        .set({ status: 2 })
+        .set({ status: 2, printerName: printerName ?? null })
         .where(eq(orders.id, fileRecord.order)),
     ]);
 

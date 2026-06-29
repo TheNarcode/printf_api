@@ -13,6 +13,7 @@ export const orders = sqliteTable("orders", {
   paymentRequestId: text("payment_request_id").notNull(),
   paid: integer("paid", { mode: "boolean" }).notNull().default(false),
   status: integer("status").notNull().default(0),
+  printerName: text("printer_name"),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
