@@ -3,41 +3,44 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "printfs",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-06-21",
-  "observability": {
-    "enabled": false,
-  },
-  "upload_source_maps": true,
-  "compatibility_flags": ["nodejs_compat"],
-  "d1_databases": [
-    {
-      "binding": "PRINTFDB",
-      "database_name": "printfdb",
-      "database_id": "c3c42879-b8a9-49d2-9bdf-3dba01515fe3",
-      "migrations_dir": "src/database/drizzle",
-    },
-  ],
-  "r2_buckets": [
-    {
-      "binding": "PRINTFBUCKET",
-      "bucket_name": "printf",
-    },
-  ],
-  "secrets": {
-    "required": [
-      "FIREBASE_CLIENT_EMAIL",
-      "FIREBASE_PRIVATE_KEY",
-      "FIREBASE_PROJECT_ID",
-      "RAZORPAY_KEY_ID",
-      "RAZORPAY_KEY_SECRET",
-      "REDIS_TOKEN",
-      "REDIS_URL",
-      "GOOGLE_AUTH_ID",
-      "RAZORPAY_WEBHOOK_SECRET",
-      "PRINTF_WEBHOOK_SECRET",
-    ],
-  },
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "printfs",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-06-21",
+	"observability": {
+		"enabled": false,
+	},
+	"upload_source_maps": true,
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"d1_databases": [
+		{
+			"binding": "PRINTFDB",
+			"database_name": "PRINTFDB",
+			"database_id": "b66f4bd3-ca09-48be-be6a-e7fc8b270eb5",
+			"migrations_dir": "src/database/drizzle",
+			"remote": true,
+		},
+	],
+	"r2_buckets": [
+		{
+			"binding": "PRINTFBUCKET",
+			"bucket_name": "printf",
+		},
+	],
+	"secrets": {
+		"required": [
+			"FIREBASE_CLIENT_EMAIL",
+			"FIREBASE_PRIVATE_KEY",
+			"FIREBASE_PROJECT_ID",
+			"RAZORPAY_KEY_ID",
+			"RAZORPAY_KEY_SECRET",
+			"REDIS_TOKEN",
+			"REDIS_URL",
+			"GOOGLE_AUTH_ID",
+			"RAZORPAY_WEBHOOK_SECRET",
+			"PRINTF_WEBHOOK_SECRET",
+		],
+	},
 }
