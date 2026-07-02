@@ -172,7 +172,7 @@ app.get("/completed", notifyWebhookMiddleware, async (c) => {
   const database = db(c.env.PRINTFDB);
 
   const result = await database.query.orders.findMany({
-    where: eq(orders.status, 2),
+    where: eq(orders.status, 1),
     columns: {
       id: true,
     },
