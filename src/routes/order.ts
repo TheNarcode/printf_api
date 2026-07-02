@@ -9,7 +9,7 @@ import { PrintConfig } from "../types/index";
 import Razorpay from "razorpay";
 import shortUniqueId from "short-unique-id";
 
-const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 7 });
+const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 5 });
 
 const app = new Hono<{ Bindings: Env }>();
 

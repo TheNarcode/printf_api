@@ -2,7 +2,7 @@ import { relations } from "drizzle-orm";
 import { sqliteTable, text, real, integer, index } from "drizzle-orm/sqlite-core";
 import shortUniqueId from "short-unique-id";
 
-const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 7 });
+const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 5 });
 
 export const orders = sqliteTable("orders", {
   id: text("id")

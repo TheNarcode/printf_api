@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import db from "../database/index";
-import { eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { orders, files, fcmTokens } from "../database/schema";
 import { getMessaging } from "firebase-admin/messaging";
 import { zValidator } from "@hono/zod-validator";
@@ -144,5 +144,42 @@ app.post(
     return c.json({ ok: true });
   },
 );
+
+app.post(
+  "/collect",
+  notifyWebhookMiddleware,
+  zValidator("json", z.object({ orderId: z.string() })),
+  async (c) => {
+    const database = db(c.env.PRINTFDB);
+    const { orderId } = c.req.valid("json");
+
+    const order = await database.query.orders.findFirst({
+      where: eq(orders.id, orderId),
+    });
+
+    if (!order) return c.json({ ok: false, error: "order not found" }, 404);
+
+    await database
+      .update(orders)
+      .set({ status: 3 })
+      .where(eq(orders.id, orderId));
+
+    return c.json({ ok: true });
+  }
+);
+
+app.get("/completed", notifyWebhookMiddleware, async (c) => {
+  const database = db(c.env.PRINTFDB);
+
+  const result = await database.query.orders.findMany({
+    where: eq(orders.status, 2),
+    columns: {
+      id: true,
+    },
+    orderBy: asc(orders.id)
+  });
+
+  return c.json(result);
+});
 
 export default app;

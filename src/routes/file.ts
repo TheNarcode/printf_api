@@ -7,7 +7,7 @@ import { maxFileSizeLimit, validMimes } from "../constants";
 import shortUniqueId from "short-unique-id";
 
 const app = new Hono<{ Bindings: Env }>();
-const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 7 });
+const sui = new shortUniqueId({ dictionary: "alpha_lower", length: 5 });
 
 app.post("/create", authMiddleware, async (c) => {
   try {
