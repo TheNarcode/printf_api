@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9179ff20-b675-489e-9db2-d823b6927650",
+  "id": "24de470f-4fe7-45b9-acc7-ac6a09f6d2ee",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "fcm_tokens": {
@@ -138,7 +138,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "order_idx": {
+          "name": "order_idx",
+          "columns": [
+            "order"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -229,6 +237,13 @@
           "autoincrement": false,
           "default": 0
         },
+        "printer_name": {
+          "name": "printer_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -237,7 +252,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "email_idx": {
+          "name": "email_idx",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

@@ -21,6 +21,7 @@ CREATE TABLE `files` (
 	`printed` integer
 );
 --> statement-breakpoint
+CREATE INDEX `order_idx` ON `files` (`order`);--> statement-breakpoint
 CREATE TABLE `metadata` (
 	`file_id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -35,5 +36,8 @@ CREATE TABLE `orders` (
 	`payment_request_id` text NOT NULL,
 	`paid` integer DEFAULT false NOT NULL,
 	`status` integer DEFAULT 0 NOT NULL,
+	`printer_name` text,
 	`created_at` integer NOT NULL
 );
+--> statement-breakpoint
+CREATE INDEX `email_idx` ON `orders` (`email`);
