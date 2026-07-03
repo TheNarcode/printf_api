@@ -8,7 +8,7 @@ import z from "zod";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { Redis } from "@upstash/redis/cloudflare";
 import { razorpayWebhookMiddleware } from "../middlewares/razorpayWebhook";
-import { notifyWebhookMiddleware } from "../middlewares/notifyWebhook";
+import { checkClientMiddleware } from "../middlewares/checkClient.js";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -25,7 +25,8 @@ app.post(`/payment`, razorpayWebhookMiddleware, async (c) => {
     return c.json({ ok: true }, 200);
   }
 
-  const id = (payload.payload?.order?.entity?.id || payload.payload?.payment?.entity?.order_id) as string | undefined;
+  const id = (payload.payload?.order?.entity?.id ||
+    payload.payload?.payment?.entity?.order_id) as string | undefined;
 
   if (!id) return c.json({ ok: true }, 200);
 
@@ -39,7 +40,10 @@ app.post(`/payment`, razorpayWebhookMiddleware, async (c) => {
   if (!order) return c.json({ ok: true }, 200);
 
   if (payload.event === "payment.cancelled") {
-    await database.update(orders).set({ status: 2 }).where(eq(orders.id, order.id));
+    await database
+      .update(orders)
+      .set({ status: 2 })
+      .where(eq(orders.id, order.id));
     return c.json({ ok: true }, 200);
   }
 
@@ -55,8 +59,11 @@ app.post(`/payment`, razorpayWebhookMiddleware, async (c) => {
 
 app.post(
   "/notify",
-  notifyWebhookMiddleware,
-  zValidator("json", z.object({ id: z.string(), printerName: z.string().optional() })),
+  checkClientMiddleware,
+  zValidator(
+    "json",
+    z.object({ id: z.string(), printerName: z.string().optional() }),
+  ),
   async (c) => {
     const database = db(c.env.PRINTFDB);
 
@@ -144,42 +151,5 @@ app.post(
     return c.json({ ok: true });
   },
 );
-
-app.post(
-  "/collect",
-  notifyWebhookMiddleware,
-  zValidator("json", z.object({ orderId: z.string() })),
-  async (c) => {
-    const database = db(c.env.PRINTFDB);
-    const { orderId } = c.req.valid("json");
-
-    const order = await database.query.orders.findFirst({
-      where: eq(orders.id, orderId),
-    });
-
-    if (!order) return c.json({ ok: false, error: "order not found" }, 404);
-
-    await database
-      .update(orders)
-      .set({ status: 3 })
-      .where(eq(orders.id, orderId));
-
-    return c.json({ ok: true });
-  }
-);
-
-app.get("/completed", notifyWebhookMiddleware, async (c) => {
-  const database = db(c.env.PRINTFDB);
-
-  const result = await database.query.orders.findMany({
-    where: eq(orders.status, 1),
-    columns: {
-      id: true,
-    },
-    orderBy: asc(orders.id)
-  });
-
-  return c.json(result);
-});
 
 export default app;

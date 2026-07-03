@@ -1,6 +1,6 @@
 import { createMiddleware } from "hono/factory";
 
-export const notifyWebhookMiddleware = createMiddleware<{
+export const checkClientMiddleware = createMiddleware<{
   Bindings: Env;
   Variables: { rawBody: string };
 }>(async (c, next) => {

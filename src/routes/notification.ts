@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
 import db from "../database/index";
 import { fcmTokens } from "../database/schema";
 import { authMiddleware } from "../middlewares/auth";
