@@ -31,6 +31,8 @@ app.get("/stats", async (c) => {
   };
 
   for (const file of allFiles) {
+    if (!file.order?.paid) continue;
+
     if (monthParam && file.order?.createdAt) {
       const date = new Date(file.order.createdAt);
       if (!isNaN(date.getTime())) {
