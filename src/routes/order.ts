@@ -48,10 +48,12 @@ app.post(
       const isColor = file.color?.toLowerCase() === "color";
       const price = isColor
         ? file.sides === "one-sided"
-          ? 5
-          : 10
+          ? 6
+          : 12
         : file.sides === "one-sided"
-          ? 3
+          ? effectivePages * copies === 1
+            ? 3
+            : 2.5
           : 2;
 
       totalAmount += effectivePages * copies * price;
