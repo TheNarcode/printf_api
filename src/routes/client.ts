@@ -4,7 +4,7 @@ import { orders, fcmTokens } from "../database/schema.js";
 import { checkClientMiddleware } from "../middlewares/checkClient.js";
 import { zValidator } from "@hono/zod-validator";
 import z from "zod";
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { getUniquePrintPageCount } from "../index.js";
 import { getMessaging } from "firebase-admin/messaging";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
@@ -167,6 +167,20 @@ app.get("/completed", async (c) => {
       id: true,
     },
     orderBy: asc(orders.id),
+  });
+
+  return c.json(result);
+});
+
+app.get("/orders", async (c) => {
+  const database = db(c.env.PRINTFDB);
+
+  const result = await database.query.orders.findMany({
+    limit: 100,
+    with: {
+      files: true,
+    },
+    orderBy: desc(orders.createdAt),
   });
 
   return c.json(result);
